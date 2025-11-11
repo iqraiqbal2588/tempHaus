@@ -1,0 +1,67 @@
+{
+  "project_info": {
+    "project_number": "957200545935",
+    "project_id": "temp-haus-dental-solutions",
+    "storage_bucket": "temp-haus-dental-solutions.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:957200545935:android:9be1294d5d1dc21d9598fa",
+        "android_client_info": {
+          "package_name": "com.example.admin_temp_haus"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC3KyHkBo_Tz-tycmADehGTyuZKrqGD758"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:957200545935:android:01d9f8af89c005629598fa",
+        "android_client_info": {
+          "package_name": "com.example.temp_haus_dental_clinic"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC3KyHkBo_Tz-tycmADehGTyuZKrqGD758"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:957200545935:android:d7b4efd3752162b29598fa",
+        "android_client_info": {
+          "package_name": "com.user.temphaus"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC3KyHkBo_Tz-tycmADehGTyuZKrqGD758"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
