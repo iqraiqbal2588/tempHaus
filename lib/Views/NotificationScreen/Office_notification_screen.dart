@@ -19,13 +19,19 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   List<Map<String, dynamic>> interestedUsers = [];
   Set<String> processedUserJobPairs = {};
   bool isLoading = true;
-  String uid = FirebaseAuth.instance.currentUser!.uid;
+
+  String uid = FirebaseAuth.instance.currentUser?.uid ?? "";
+
   StreamSubscription? listener;
 
   @override
   void initState() {
     super.initState();
-    startListeningToInterests();
+    if (uid.isNotEmpty) {
+      startListeningToInterests();
+    } else {
+      setState(() => isLoading = false);
+    }
   }
 
   void startListeningToInterests() {
@@ -35,11 +41,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         .collection('postingDetails')
         .snapshots()
         .listen((snapshot) async {
+
       List<Map<String, dynamic>> newInterestedUsers = [];
       Set<String> newProcessedPairs = {};
 
       for (var doc in snapshot.docs) {
-        final postData = doc.data();
+        final postData = doc.data() ?? {};
         final List<dynamic> interestedList = postData['interested'] ?? [];
 
         for (String interestedUid in interestedList) {
@@ -53,23 +60,31 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
           if (!professionalDoc.exists) continue;
 
+          final professionalData = professionalDoc.data() ?? {};
+
+          // job data
           final String workPlace = postData['location'] ?? 'No Name';
           final String location = postData['location'] ?? '';
           final String day = postData['imageUrl'] ?? '';
-          final String startTime = postData['startTime'] ?? 'No Name';
-          final String endTime = postData['endTime'] ?? '';
-          final double payRate = postData['amount']?.toDouble() ?? 0.0;
+          final String startTime = postData['startTime'] ?? 'N/A';
+          final String endTime = postData['endTime'] ?? 'N/A';
+          final double payRate = (postData['amount'] is num)
+              ? (postData['amount'] as num).toDouble()
+              : 0.0;
           final String jobTitle = postData['jobTitle'] ?? '';
 
-          // ✅ SAFELY HANDLE TIMESTAMP
+          // createdAt
           Timestamp? createdAtTimestamp;
           if (postData['createdAt'] is Timestamp) {
             createdAtTimestamp = postData['createdAt'];
           } else if (postData['createdAt'] is String) {
             try {
               createdAtTimestamp = Timestamp.fromDate(
-                  DateFormat('yyyy-MM-dd').parse(postData['createdAt']));
-            } catch (_) {}
+                DateFormat('yyyy-MM-dd').parse(postData['createdAt']),
+              );
+            } catch (e) {
+              createdAtTimestamp = null;
+            }
           }
 
           final String formattedDate = createdAtTimestamp != null
@@ -77,10 +92,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               .format(createdAtTimestamp.toDate())
               : 'Unknown';
 
-          final professionalData = professionalDoc.data()!;
+          // professional data
           final String name = professionalData['firstName'] ?? 'No Name';
           final String about = professionalData['bio'] ?? '';
-          final String image = professionalData['imageUrl'] ?? '';
+          final String image = professionalData['imageUrl'] ?? Images.profile;
 
           newInterestedUsers.add({
             'workPlace': workPlace,
@@ -127,18 +142,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         title: Text(
           "Notifications",
           style: TextStyle(
-              color: Colors.white,
-              fontSize: 22.sp,
-              fontWeight: FontWeight.bold),
+            color: Colors.white,
+            fontSize: 22.sp,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         centerTitle: true,
         actions: [
           Padding(
-            padding: EdgeInsets.only(right: 16.0.w),
+            padding: EdgeInsets.only(right: 16.w),
             child: CircleAvatar(
               backgroundColor: Colors.brown[200],
-              child:
-              Icon(Icons.notifications, color: Colors.white, size: 24.sp),
+              child: Icon(Icons.notifications, color: Colors.white, size: 24.sp),
             ),
           ),
         ],

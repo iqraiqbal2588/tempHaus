@@ -15,11 +15,21 @@ class OfficeAddScheduleScreen extends StatefulWidget {
 
 class _OfficeAddScheduleScreenState extends State<OfficeAddScheduleScreen> {
   final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _descriptionController = TextEditingController();
+
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
   String code = generate8DigitCode();
-  String uid = FirebaseAuth.instance.currentUser!.uid;
+
+  // 🔥 SAFE UID (NO NULL CRASH)
+  String get uid {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      return "guest_office"; // store schedule for guest/no-login user
+    }
+    return user.uid;
+  }
+
+  // ---------------- UPLOAD SCHEDULE ----------------
   Future<void> uploadScheduleToList({
     required String userId,
     required OfficeScheduleModel schedule,
@@ -34,6 +44,7 @@ class _OfficeAddScheduleScreenState extends State<OfficeAddScheduleScreen> {
           .set({
         'schedules': FieldValue.arrayUnion([schedule.toMap()])
       }, SetOptions(merge: true));
+
       Get.snackbar(
         "",
         "Schedule added successfully.",
@@ -42,6 +53,7 @@ class _OfficeAddScheduleScreenState extends State<OfficeAddScheduleScreen> {
         snackPosition: SnackPosition.TOP,
         margin: EdgeInsets.all(16),
       );
+
       Navigator.pop(context, true);
     } catch (e) {
       Get.snackbar("Error", '$e',
@@ -49,6 +61,7 @@ class _OfficeAddScheduleScreenState extends State<OfficeAddScheduleScreen> {
     }
   }
 
+  // ---------------- PICK DATE ----------------
   void _pickDate() async {
     DateTime? pickedDate = await showDatePicker(
       context: context,
@@ -58,29 +71,24 @@ class _OfficeAddScheduleScreenState extends State<OfficeAddScheduleScreen> {
     );
 
     if (pickedDate != null) {
-      setState(() {
-        _selectedDate = pickedDate;
-      });
+      setState(() => _selectedDate = pickedDate);
     }
   }
 
+  // ---------------- PICK TIME ----------------
   void _pickTime() async {
-    TimeOfDay? pickedTime = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.now(),
-    );
+    TimeOfDay? pickedTime =
+    await showTimePicker(context: context, initialTime: TimeOfDay.now());
 
     if (pickedTime != null) {
-      setState(() {
-        _selectedTime = pickedTime;
-      });
+      setState(() => _selectedTime = pickedTime);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black, // Matches the calendar screen theme
+      backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
         title: Text("Add Scheduling", style: TextStyle(color: Colors.white)),
@@ -89,7 +97,7 @@ class _OfficeAddScheduleScreenState extends State<OfficeAddScheduleScreen> {
         iconTheme: IconThemeData(color: Colors.white),
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(16.w),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -98,50 +106,57 @@ class _OfficeAddScheduleScreenState extends State<OfficeAddScheduleScreen> {
             SizedBox(height: 5),
             TextField(
               controller: _titleController,
-              style: TextStyle(color: Colorss.blackColor),
+              style: TextStyle(color: Colors.black),
               decoration: InputDecoration(
                 filled: true,
-                fillColor: Colorss.whiteColor,
+                fillColor: Colors.white,
                 border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                 hintText: "Enter title",
                 hintStyle: TextStyle(color: Colors.grey),
               ),
             ),
             SizedBox(height: 15.h),
+
+            // ------------ DATE PICKER ------------
             Text("Select Date",
-                style: TextStyle(color: Colors.white, fontSize: 16.sp)),
-            SizedBox(height: 5.h),
+                style: TextStyle(color: Colors.white, fontSize: 16)),
+            SizedBox(height: 5),
             GestureDetector(
               onTap: _pickDate,
               child: Container(
-                padding: EdgeInsets.all(15.w),
+                padding: EdgeInsets.all(15),
                 decoration: BoxDecoration(
-                  color: Colorss.whiteColor,
-                  borderRadius: BorderRadius.circular(10.r),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(_selectedDate == null
-                        ? "Select a Date"
-                        : _selectedDate.toString()),
-                    Icon(Icons.calendar_today, color: Colors.white),
+                    Text(
+                      _selectedDate == null
+                          ? "Select a Date"
+                          : _selectedDate.toString().split(" ").first,
+                      style: TextStyle(color: Colors.black),
+                    ),
+                    Icon(Icons.calendar_today, color: Colors.black),
                   ],
                 ),
               ),
             ),
             SizedBox(height: 15.h),
+
+            // ------------ TIME PICKER ------------
             Text("Time",
-                style: TextStyle(color: Colors.white, fontSize: 16.sp)),
-            SizedBox(height: 5.h),
+                style: TextStyle(color: Colors.white, fontSize: 16)),
+            SizedBox(height: 5),
             GestureDetector(
               onTap: _pickTime,
               child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 12.h, vertical: 16.w),
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
                 decoration: BoxDecoration(
-                  color: Colorss.whiteColor,
-                  borderRadius: BorderRadius.circular(10.r),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -150,18 +165,17 @@ class _OfficeAddScheduleScreenState extends State<OfficeAddScheduleScreen> {
                       _selectedTime != null
                           ? _selectedTime!.format(context)
                           : "Select Time",
-                      style: TextStyle(color: Colors.black, fontSize: 16.sp),
+                      style: TextStyle(color: Colors.black, fontSize: 16),
                     ),
-                    Icon(
-                      Icons.access_time,
-                      color: Colors.black,
-                      size: 22.sp,
-                    ),
+                    Icon(Icons.access_time, color: Colors.black),
                   ],
                 ),
               ),
             ),
+
             SizedBox(height: 25.h),
+
+            // ------------ SAVE BUTTON ------------
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -173,23 +187,25 @@ class _OfficeAddScheduleScreenState extends State<OfficeAddScheduleScreen> {
                   if (_titleController.text.isEmpty ||
                       _selectedDate == null ||
                       _selectedTime == null) {
-                    Get.snackbar("error", 'Please fill all fields',
+                    Get.snackbar("Error", 'Please fill all fields',
                         backgroundColor: Colorss.lightAppColor,
                         colorText: Colors.black);
                     return;
                   }
+
                   final schedule = OfficeScheduleModel(
                     title: _titleController.text.trim(),
                     date: _selectedDate!,
                     time: _selectedTime!.format(context),
                   );
+
                   await uploadScheduleToList(
-                    userId: uid,
+                    userId: uid, // <-- SAFE UID
                     schedule: schedule,
                     context: context,
                   );
+
                   _titleController.clear();
-                  _descriptionController.clear();
                   setState(() {
                     _selectedDate = null;
                     _selectedTime = null;
@@ -200,7 +216,7 @@ class _OfficeAddScheduleScreenState extends State<OfficeAddScheduleScreen> {
                   style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 18.sp,
-                      color: Colorss.whiteColor),
+                      color: Colors.white),
                 ),
               ),
             ),

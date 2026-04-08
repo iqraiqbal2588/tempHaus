@@ -39,6 +39,7 @@ class _OfficeHomeScreenState extends State<OfficeHomeScreen> {
     _searchController.dispose();
     super.dispose();
   }
+
   Future<void> fetchProfileData() async {
     try {
       final uid = _auth.currentUser?.uid;
@@ -152,101 +153,106 @@ class _OfficeHomeScreenState extends State<OfficeHomeScreen> {
             SizedBox(height: 12.h),
             Expanded(
                 child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collectionGroup('availability')
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+                  stream: FirebaseFirestore.instance
+                      .collectionGroup('availability')
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
 
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(child: Text("No job posts available."));
-                }
-                final allJobs = snapshot.data!.docs;
-                final filteredJobs = allJobs.where((doc) {
-                  final data = doc.data() as Map<String, dynamic>;
-                  final name =
+                    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                      return const Center(child: Text("No job posts available."));
+                    }
+                    final allJobs = snapshot.data!.docs;
+                    final filteredJobs = allJobs.where((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      final name =
                       (data['officeName'] ?? '').toString().toLowerCase();
-                  final profession =
+                      final profession =
                       (data['profession'] ?? '').toString().toLowerCase();
-                  final location =
+                      final location =
                       (data['location'] ?? '').toString().toLowerCase();
-                  return name.contains(searchText) ||
-                      profession.contains(searchText) ||
-                      location.contains(searchText);
-                }).toList();
+                      return name.contains(searchText) ||
+                          profession.contains(searchText) ||
+                          location.contains(searchText);
+                    }).toList();
 
-                if (filteredJobs.isEmpty) {
-                  return const Center(child: Text("No matching jobs found."));
-                }
+                    if (filteredJobs.isEmpty) {
+                      return const Center(child: Text("No matching jobs found."));
+                    }
 
-                return ListView.builder(
-                  itemCount: filteredJobs.length,
-                  itemBuilder: (context, index) {
-                    final job =
+                    return ListView.builder(
+                      itemCount: filteredJobs.length,
+                      itemBuilder: (context, index) {
+                        final job =
                         filteredJobs[index].data() as Map<String, dynamic>;
-                    return DoctorWidget(
-                      imageUrl: 'assets/post_job.svg',
-                      name: safeValue(job['name'], 'Dr Unknown'),
-                      experience: safeValue(job['experience'], 'N/A'),
-                      location: safeValue(job['location'], 'Unknown'),
-                      rate: '\$${safeValue(job['hourlyWage'], '0')}',
-                      onSendInvitation: () async {
-                        String currentUserId =
-                            FirebaseAuth.instance.currentUser!.uid;
-                        String professionalUid = safeValue(job['uid'], '');
-                        String docId = safeValue(job['docId'], '');
+                        return DoctorWidget(
+                          imageUrl: safeValue(
+                              job['image'],'null'),
+                          name: safeValue(job['name'], 'Dr Unknown'),
+                          experience: safeValue(job['experience'], 'N/A'),
+                          location: safeValue(job['location'], 'Unknown'),
+                          rate: job['hourlyWage'] != null
+                              ? '\$${job['hourlyWage'].toString().replaceAll('.0', '')}'
+                              : '',
 
-                        if (professionalUid.isEmpty || docId.isEmpty) return;
+                          onSendInvitation: () async {
+                            String currentUserId =
+                                FirebaseAuth.instance.currentUser!.uid;
+                            String professionalUid = safeValue(job['uid'], '');
+                            String docId = safeValue(job['docId'], '');
 
-                        final docRef = FirebaseFirestore.instance
-                            .collection('professionals')
-                            .doc(professionalUid)
-                            .collection('availability')
-                            .doc(docId);
+                            if (professionalUid.isEmpty || docId.isEmpty) return;
 
-                        final docSnapshot = await docRef.get();
-                        final invitedList = List<String>.from(
-                            docSnapshot.data()?['invited'] ?? []);
+                            final docRef = FirebaseFirestore.instance
+                                .collection('professionals')
+                                .doc(professionalUid)
+                                .collection('availability')
+                                .doc(docId);
 
-                        if (invitedList.contains(currentUserId)) {
-                          Get.snackbar(
-                              'Notice', 'You already marked as interested.',
-                              backgroundColor: Colorss.lightAppColor,
-                              colorText: Colors.black);
-                          return;
-                        }
+                            final docSnapshot = await docRef.get();
+                            final invitedList = List<String>.from(
+                                docSnapshot.data()?['invited'] ?? []);
 
-                        await docRef.update({
-                          'invited': FieldValue.arrayUnion([currentUserId]),
-                        });
+                            if (invitedList.contains(currentUserId)) {
+                              Get.snackbar(
+                                  'Notice', 'You already marked as interested.',
+                                  backgroundColor: Colorss.lightAppColor,
+                                  colorText: Colors.black);
+                              return;
+                            }
 
-                        Get.snackbar('Notice', 'Successfully sent invitation',
-                            backgroundColor: Colorss.lightAppColor,
-                            colorText: Colors.black);
-                      },
-                      onSeeInvitation: () {
-                        Get.toNamed(
-                          AppRoutes.doctorProfile,
-                          arguments: {
-                            'imageUrl': safeValue(job['image'], ''),
-                            'name': safeValue(job['name'], 'Dr Unknown'),
-                            'experience': safeValue(job['experience'], 'N/A'),
-                            'location': safeValue(job['location'], 'Unknown'),
-                            'rate': '\$${safeValue(job['hourlyWage'], '0')}',
-                            'about':
+                            await docRef.update({
+                              'invited': FieldValue.arrayUnion([currentUserId]),
+                            });
+
+                            Get.snackbar('Notice', 'Successfully sent invitation',
+                                backgroundColor: Colorss.lightAppColor,
+                                colorText: Colors.black);
+                          },
+                          onSeeInvitation: () {
+                            Get.toNamed(
+                              AppRoutes.doctorProfile,
+                              arguments: {
+                                'imageUrl': safeValue(job['image'], ''),
+                                'name': safeValue(job['name'], 'Dr Unknown'),
+                                'experience': safeValue(job['experience'], 'N/A'),
+                                'location': safeValue(job['location'], 'Unknown'),
+                                'rate': '\$${safeValue(job['hourlyWage'], '').toString().replaceAll('.0', '')}',
+
+                                'about':
                                 safeValue(job['about'], 'Nothing added yet'),
-                            'profession': safeValue(
-                                job['profession'], 'Dental Hygienist'),
+                                'profession': safeValue(
+                                    job['profession'], 'Dental Hygienist'),
+                              },
+                            );
                           },
                         );
                       },
                     );
                   },
-                );
-              },
-            )),
+                )),
           ],
         ),
       ),

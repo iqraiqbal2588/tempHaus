@@ -13,19 +13,21 @@ class OfficePostsScreen extends StatefulWidget {
 
 class _OfficePostsScreenState extends State<OfficePostsScreen> {
   final Map<String, String> nameCache = {};
-  late String uid;
+  late String officeDocId;
 
   @override
   void initState() {
     super.initState();
-    uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+
+    // 🔥 Always load saved office posts (even without login)
+    officeDocId = FirebaseAuth.instance.currentUser?.uid ?? "defaultOffice";
   }
 
   Future<void> markPostAsCompleted(String postId) async {
     try {
       await FirebaseFirestore.instance
           .collection('offices')
-          .doc(uid)
+          .doc(officeDocId)
           .collection('postingDetails')
           .doc(postId)
           .update({'isCompleted': true});
@@ -39,7 +41,7 @@ class _OfficePostsScreenState extends State<OfficePostsScreen> {
 
   Future<String> fetchProfessionalName(String? uid) async {
     if (uid == null || uid.isEmpty) return 'Not accepted yet';
-    if (nameCache.containsKey(uid)) return nameCache[uid]!;
+    if (nameCache.containsKey(uid)) return nameCache[uid] ?? 'Unknown';
 
     try {
       final doc = await FirebaseFirestore.instance
@@ -48,7 +50,8 @@ class _OfficePostsScreenState extends State<OfficePostsScreen> {
           .get();
 
       if (doc.exists) {
-        final name = doc.data()?['firstName']?.toString() ?? 'Unknown Professional';
+        final name =
+        (doc.data()?['firstName']?.toString() ?? 'Unknown Professional');
         nameCache[uid] = name;
         return name;
       }
@@ -70,10 +73,12 @@ class _OfficePostsScreenState extends State<OfficePostsScreen> {
           style: TextStyle(color: Colorss.whiteColor, fontSize: 22.sp),
         ),
       ),
+
+      /// 🔥 Removed "User not logged in" – we ALWAYS show posts.
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('offices')
-            .doc(uid)
+            .doc(officeDocId)
             .collection('postingDetails')
             .snapshots(),
         builder: (context, snapshot) {
@@ -81,34 +86,42 @@ class _OfficePostsScreenState extends State<OfficePostsScreen> {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text("No posts available."));
+          final docs = snapshot.data?.docs ?? [];
+
+          if (docs.isEmpty) {
+            return const Center(
+              child: Text(
+                "No posts available.",
+                style: TextStyle(color: Colors.white),
+              ),
+            );
           }
 
-          final posts = snapshot.data!.docs;
-
           return ListView.builder(
-            itemCount: posts.length,
+            itemCount: docs.length,
             itemBuilder: (context, index) {
-              final post = posts[index];
+              final post = docs[index];
               final postId = post.id;
-              final data = post.data() as Map<String, dynamic>;
+              final data = (post.data() as Map<String, dynamic>? ?? {});
 
-              final isCompleted = data['isCompleted'] == true;
-              final title = data['jobTitle']?.toString() ?? 'No Title';
-              final description = data['description']?.toString() ?? 'No Description';
-              final image = data['image']?.toString();
+              final bool isCompleted = data['isCompleted'] == true;
+              final String title = data['jobTitle']?.toString() ?? 'No Title';
+              final String description =
+                  data['description']?.toString() ?? 'No Description';
+              final String? image = data['image']?.toString();
 
-              // Handle status map safely
+              /// ✔ SAFELY FETCH acceptedBy
               String? acceptedBy;
-              final statusMap = data['statusMap'] as Map<String, dynamic>?;
+              final statusMap =
+              data['statusMap'] is Map ? data['statusMap'] as Map? : null;
+
               if (statusMap != null) {
                 final acceptedEntry = statusMap.entries.firstWhere(
                       (entry) => entry.value == 'accepted',
                   orElse: () => const MapEntry('', ''),
                 );
-                if (acceptedEntry.key.isNotEmpty) {
-                  acceptedBy = acceptedEntry.key;
+                if (acceptedEntry.key.toString().isNotEmpty) {
+                  acceptedBy = acceptedEntry.key.toString();
                 }
               }
 
@@ -124,31 +137,25 @@ class _OfficePostsScreenState extends State<OfficePostsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      /// IMAGE + DATA
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Image with null check
                           if (image != null && image.isNotEmpty)
-                            Column(
-                              children: [
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(12.r),
-                                  child: Image.network(
-                                    image,
-                                    height: 100.h,
-                                    width: 110.w,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) =>
-                                        Container(
-                                          height: 100.h,
-                                          width: 110.w,
-                                          color: Colors.grey[300],
-                                          child: const Icon(Icons.error),
-                                        ),
-                                  ),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(12.r),
+                              child: Image.network(
+                                image,
+                                height: 100.h,
+                                width: 110.w,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Container(
+                                  height: 100.h,
+                                  width: 110.w,
+                                  color: Colors.grey[300],
+                                  child: const Icon(Icons.error),
                                 ),
-                                SizedBox(height: 12.h),
-                              ],
+                              ),
                             )
                           else
                             Container(
@@ -159,6 +166,8 @@ class _OfficePostsScreenState extends State<OfficePostsScreen> {
                             ),
 
                           SizedBox(width: 12.w),
+
+                          /// TEXT
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -174,36 +183,32 @@ class _OfficePostsScreenState extends State<OfficePostsScreen> {
                                 SizedBox(height: 4.h),
                                 Text(
                                   description,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     fontSize: 14.sp,
                                     color: Colors.black.withOpacity(0.8),
                                   ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                SizedBox(height: 6.h),
                               ],
                             ),
                           ),
                         ],
                       ),
 
-                      // Accepted by section
+                      SizedBox(height: 10.h),
+
+                      /// ACCEPTED BY
                       if (acceptedBy != null)
                         FutureBuilder<String>(
                           future: fetchProfessionalName(acceptedBy),
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState == ConnectionState.waiting) {
-                              return Text(
-                                'Loading...',
-                                style: TextStyle(
-                                  fontSize: 12.sp,
-                                  fontStyle: FontStyle.italic,
-                                ),
-                              );
+                          builder: (context, snap) {
+                            if (snap.connectionState ==
+                                ConnectionState.waiting) {
+                              return const Text('Loading...');
                             }
                             return Text(
-                              'Accepted by: ${snapshot.data ?? 'Unknown'}',
+                              'Accepted by: ${snap.data}',
                               style: TextStyle(
                                 fontSize: 12.sp,
                                 fontWeight: FontWeight.w600,
@@ -222,7 +227,9 @@ class _OfficePostsScreenState extends State<OfficePostsScreen> {
                           ),
                         ),
 
-                      // Action buttons
+                      SizedBox(height: 10.h),
+
+                      /// ACTION BUTTON
                       if (acceptedBy != null && !isCompleted)
                         ElevatedButton(
                           onPressed: () => markPostAsCompleted(postId),
@@ -235,12 +242,11 @@ class _OfficePostsScreenState extends State<OfficePostsScreen> {
                           ),
                         )
                       else if (isCompleted)
-                        Text(
+                        const Text(
                           'Completed',
                           style: TextStyle(
                             color: Colors.green,
                             fontWeight: FontWeight.bold,
-                            fontSize: 14.sp,
                           ),
                         ),
                     ],

@@ -96,7 +96,11 @@ class ProfessionalDentalsDetail extends StatelessWidget {
           final String jobTitle = args['jobTitle'] ?? 'Job Title';
           final String workplace = args['workplace'] ?? 'Workplace';
           final String location = args['location'] ?? 'Location';
-          final String payRate = args['payRate'] ?? '0';
+          final String payRate =
+          args['payRate'] != null
+              ? args['payRate'].toString().replaceAll('.0', '')
+              : '';
+
           final String imageUrl = args['imageUrl'] ?? '';
           final String description = args['description'] ?? '';
           final String details = args['detail'] ?? '';
@@ -221,7 +225,12 @@ class ProfessionalDentalsDetail extends StatelessWidget {
         SizedBox(height: 4.h),
         Text(workplace, style: TextStyle(fontSize: 14.sp, color: Colors.grey)),
         SizedBox(height: 10.h),
-        _buildInfoRow(Icons.location_on, location, 'Rate: $payRate / Day', ),
+        _buildInfoRow(
+          Icons.location_on,
+          location,
+          'Rate: \$$payRate/hr',
+        ),
+
         SizedBox(height: 10.h),
         _buildInfoRow(Icons.calendar_today, 'Date:', createdAt),
 

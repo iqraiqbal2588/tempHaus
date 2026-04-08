@@ -43,13 +43,37 @@ class DoctorWidget extends StatelessWidget {
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8.r),
-                    child: SvgPicture.asset(
+                    child: Image.network(
                       imageUrl,
-                      width: 103.w,
-                      height: 108.h,
+                      width: 60.w,
+                      height: 60.h,
                       fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          width: 60.w,
+                          height: 60.h,
+                          color: Colors.grey.shade200,
+                          alignment: Alignment.center,
+                          child: const Icon(
+                            Icons.person,
+                            color: Colors.grey,
+                            size: 32,
+                          ),
+                        );
+                      },
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Container(
+                          width: 60.w,
+                          height: 60.h,
+                          color: Colors.grey.shade100,
+                          alignment: Alignment.center,
+                          child: const CircularProgressIndicator(strokeWidth: 2),
+                        );
+                      },
                     ),
                   ),
+
                   SizedBox(width: 12.w),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -71,7 +95,7 @@ class DoctorWidget extends StatelessWidget {
                       ),
                       SizedBox(height: 4.h),
                       Text(
-                        'Rate : $rate',
+                        'Rate : $rate/hr',
                         style: TextStyle(
                             fontSize: 13.sp, fontWeight: FontWeight.w600),
                       ),

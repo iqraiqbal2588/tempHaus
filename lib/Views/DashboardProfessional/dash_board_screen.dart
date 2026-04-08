@@ -227,8 +227,11 @@ class _ProfessionalHomeScreenState extends State<ProfessionalHomeScreen> {
                       imageUrl: data['image'] ?? 'assets/post_job.svg',
                       jobTitle: data['jobTitle'] ?? 'No title',
                       workplace: data['location'] ?? 'Unknown',
-                      payRate: data['amount'] != null ? data['amount'].toString() : '0',
-                      location: data['location'] ?? 'Unknown',
+                        payRate: data['amount'] != null
+                            ? data['amount'].toString().replaceAll('.0', '')
+                            : '',
+
+                        location: data['location'] ?? 'Unknown',
                       description: data['description'] ?? '',
                       detail: data['details'] ?? '',
                       userId: data['uid'] ?? '',

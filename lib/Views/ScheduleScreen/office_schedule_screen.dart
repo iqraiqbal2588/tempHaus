@@ -20,52 +20,75 @@ class _OfficeCalendarScheduleScreenState
     extends State<OfficeCalendarScheduleScreen> {
   DateTime _selectedDay = DateTime.now();
   CalendarFormat _calendarFormat = CalendarFormat.month;
-  String uid = FirebaseAuth.instance.currentUser!.uid;
+
+  String get safeUid => FirebaseAuth.instance.currentUser?.uid ?? "";
+
   Map<DateTime, List<OfficeScheduleModel>> _events = {};
 
-  // Fetching schedules with real-time updates using snapshots
+  // Fetch schedules safely
   void fetchSchedules() {
+    if (safeUid.isEmpty) return;
+
     FirebaseFirestore.instance
         .collection('offices')
-        .doc(uid) // Replace with actual userId
+        .doc(safeUid)
         .collection('ScheduleTimings')
         .doc('20318298')
         .snapshots()
         .listen((snapshot) {
-      if (snapshot.exists) {
-        final data = snapshot.data()!;
-        final List<dynamic> scheduleList = data['schedules'];
-
-        final Map<DateTime, List<OfficeScheduleModel>> loadedEvents = {};
-
-        for (var item in scheduleList) {
-          final model =
-              OfficeScheduleModel.fromMap(Map<String, dynamic>.from(item));
-          final date =
-              DateTime(model.date.year, model.date.month, model.date.day);
-
-          if (loadedEvents[date] == null) {
-            loadedEvents[date] = [model];
-          } else {
-            loadedEvents[date]!.add(model);
-          }
-        }
-
+      if (!snapshot.exists || snapshot.data() == null) {
         setState(() {
-          _events = loadedEvents;
+          _events = {}; // no data → empty events
         });
+        return;
       }
+
+      final data = snapshot.data() as Map<String, dynamic>?;
+
+      if (data == null || data['schedules'] == null) {
+        setState(() {
+          _events = {};
+        });
+        return;
+      }
+
+      final List<dynamic> scheduleList = data['schedules'] ?? [];
+
+      final Map<DateTime, List<OfficeScheduleModel>> loadedEvents = {};
+
+      for (var item in scheduleList) {
+        if (item is Map<String, dynamic>) {
+          final model = OfficeScheduleModel.fromMap(item);
+
+          final date =
+          DateTime(model.date.year, model.date.month, model.date.day);
+
+          loadedEvents.putIfAbsent(date, () => []);
+          loadedEvents[date]!.add(model);
+        }
+      }
+
+      setState(() {
+        _events = loadedEvents;
+      });
     });
   }
 
   @override
   void initState() {
     super.initState();
-    fetchSchedules(); // Start listening to schedule changes
+    fetchSchedules();
   }
 
   @override
   Widget build(BuildContext context) {
+    final todayEvents = _events[DateTime(
+      _selectedDay.year,
+      _selectedDay.month,
+      _selectedDay.day,
+    )] ??
+        [];
+
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -83,10 +106,10 @@ class _OfficeCalendarScheduleScreenState
             padding: EdgeInsets.only(right: 16.0.w),
             child: CircleAvatar(
               radius: 30.r,
-              backgroundColor: Colors.brown[200], // Profile icon background
+              backgroundColor: Colors.brown[200],
               child: SvgPicture.asset(
-                Images.calender, // Replace with your SVG file path
-                width: 30.w, // Adjust size as needed
+                Images.calender,
+                width: 30.w,
                 height: 30.h,
               ),
             ),
@@ -97,42 +120,47 @@ class _OfficeCalendarScheduleScreenState
         padding: EdgeInsets.all(20.w),
         child: Column(
           children: [
+            /// --- Calendar ---
             Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10.r),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10.r),
+              ),
+              child: TableCalendar(
+                firstDay: DateTime.utc(2020, 1, 1),
+                lastDay: DateTime.utc(2030, 12, 31),
+                focusedDay: _selectedDay,
+                calendarFormat: _calendarFormat,
+                selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+                onDaySelected: (selectedDay, focusedDay) {
+                  setState(() {
+                    _selectedDay = selectedDay;
+                  });
+                },
+                eventLoader: (day) {
+                  final date = DateTime(day.year, day.month, day.day);
+                  return _events[date] ?? [];
+                },
+                headerStyle: HeaderStyle(
+                  formatButtonVisible: false,
+                  titleCentered: true,
+                  titleTextStyle: TextStyle(
+                      fontSize: 16.sp, fontWeight: FontWeight.bold),
                 ),
-                child: TableCalendar(
-                  firstDay: DateTime.utc(2020, 1, 1),
-                  lastDay: DateTime.utc(2030, 12, 31),
-                  focusedDay: _selectedDay,
-                  calendarFormat: _calendarFormat,
-                  selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-                  onDaySelected: (selectedDay, focusedDay) {
-                    setState(() {
-                      _selectedDay = selectedDay;
-                    });
-                  },
-                  eventLoader: (day) {
-                    final date = DateTime(day.year, day.month, day.day);
-                    return _events[date] ?? [];
-                  },
-                  headerStyle: HeaderStyle(
-                    formatButtonVisible: false,
-                    titleCentered: true,
-                    titleTextStyle:
-                        TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
-                  ),
-                  calendarStyle: CalendarStyle(
-                    todayDecoration: BoxDecoration(
-                        color: Colors.orange, shape: BoxShape.circle),
-                    selectedDecoration: BoxDecoration(
-                        color: Colors.red, shape: BoxShape.circle),
-                    markerDecoration: BoxDecoration(
-                        color: Colors.blue, shape: BoxShape.circle),
-                  ),
-                )),
+                calendarStyle: CalendarStyle(
+                  todayDecoration: const BoxDecoration(
+                      color: Colors.orange, shape: BoxShape.circle),
+                  selectedDecoration: const BoxDecoration(
+                      color: Colors.red, shape: BoxShape.circle),
+                  markerDecoration: const BoxDecoration(
+                      color: Colors.blue, shape: BoxShape.circle),
+                ),
+              ),
+            ),
+
             SizedBox(height: 20.h),
+
+            /// --- Add Schedule Button ---
             ElevatedButton(
               onPressed: () {
                 Get.toNamed(AppRoutes.addScheduleOffice);
@@ -149,44 +177,52 @@ class _OfficeCalendarScheduleScreenState
                 style: TextStyle(fontSize: 16.sp, color: Colors.black),
               ),
             ),
+
             SizedBox(height: 10.h),
+
+            /// --- Event List ---
             Expanded(
-              child: ListView(
-                children: (_events[DateTime(_selectedDay.year,
-                            _selectedDay.month, _selectedDay.day)] ??
-                        [])
-                    .map((event) => Padding(
-                          padding: EdgeInsets.symmetric(vertical: 6.h),
-                          child: Container(
-                            padding: EdgeInsets.all(12.w),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(10.r),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  event.title,
-                                  style: TextStyle(
-                                      fontSize: 18.sp,
-                                      fontWeight: FontWeight.w500,
-                                      color: Colors.black),
-                                ),
-                                Divider(
-                                  height: 1.h,
-                                  color: Colors.black,
-                                ),
-                                Text(
-                                  event.time,
-                                  style: TextStyle(
-                                      fontSize: 17.sp, color: Colors.black),
-                                ),
-                              ],
-                            ),
+              child: todayEvents.isEmpty
+                  ? Center(
+                child: Text(
+                  "No schedules for this day.",
+                  style:
+                  TextStyle(color: Colors.white70, fontSize: 16.sp),
+                ),
+              )
+                  : ListView.builder(
+                itemCount: todayEvents.length,
+                itemBuilder: (context, index) {
+                  final event = todayEvents[index];
+                  return Padding(
+                    padding: EdgeInsets.symmetric(vertical: 6.h),
+                    child: Container(
+                      padding: EdgeInsets.all(12.w),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10.r),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            event.title,
+                            style: TextStyle(
+                                fontSize: 18.sp,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.black),
                           ),
-                        ))
-                    .toList(),
+                          Divider(height: 1.h, color: Colors.black),
+                          Text(
+                            event.time,
+                            style: TextStyle(
+                                fontSize: 17.sp, color: Colors.black),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
           ],

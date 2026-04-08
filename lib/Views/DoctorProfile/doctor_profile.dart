@@ -95,7 +95,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                                 ),
                                 Spacer(),
                                 Text(
-                                  "Rate: $rate",
+                                  "Rate: $rate/hr",
                                   style: TextStyle(
                                     fontSize: 14.sp,
                                     fontWeight: FontWeight.bold,
@@ -178,14 +178,21 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                         borderRadius: BorderRadius.circular(20.r),
                         boxShadow: [
                           BoxShadow(
-                              color: Colors.black26,
-                              blurRadius: 5.r,
-                              spreadRadius: 2.r),
+                            color: Colors.black26,
+                            blurRadius: 5.r,
+                            spreadRadius: 2.r,
+                          ),
                         ],
                       ),
-                      child: imageUrl.startsWith('http')
+                      child: (imageUrl != null && imageUrl.isNotEmpty && imageUrl.startsWith('http'))
                           ? Image.network(imageUrl, fit: BoxFit.cover)
-                          : Image.asset(imageUrl, fit: BoxFit.cover),
+                          : const Center(
+                        child: Icon(
+                          Icons.person,
+                          size: 80,
+                          color: Colors.grey,
+                        ),
+                      ),
                     ),
                   ),
                 ),

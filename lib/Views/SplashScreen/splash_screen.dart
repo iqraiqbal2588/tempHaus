@@ -8,7 +8,6 @@ import 'package:temp_haus_dental_clinic/Routes/approutes.dart';
 import 'package:temp_haus_dental_clinic/Views/AuthScreens/Widgets/custom_auth_button.dart';
 import 'package:temp_haus_dental_clinic/Views/AuthScreens/Widgets/custom_button.dart';
 
-
 class SplashScreen extends StatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);
 
@@ -26,8 +25,8 @@ class _SplashScreenState extends State<SplashScreen> {
   Future<void> checkAuthenticationAndNavigate() async {
     final user = FirebaseAuth.instance.currentUser;
 
+    // ❌ User NOT logged in → Go to Login
     if (user == null) {
-
       Get.offAllNamed(AppRoutes.login);
       return;
     }
@@ -45,25 +44,28 @@ class _SplashScreenState extends State<SplashScreen> {
           .doc(uid)
           .get();
 
+      // ✅ Logged in + role based navigation
       if (officeDoc.exists) {
-        // User is dental office
         Get.offAllNamed(AppRoutes.bottomNav);
       } else if (professionalDoc.exists) {
-        // User is professional
         Get.offAllNamed(AppRoutes.bottomNavProfessional);
       } else {
-        // User exists in auth but not in Firestore roles
+        // Logged in but role missing → force logout or role selection
         await FirebaseAuth.instance.signOut();
         Get.offAllNamed(AppRoutes.login);
       }
     } catch (e) {
-      print("Error determining user role: $e");
-      Get.snackbar("Error", "Something went wrong. Please try again.",
-          snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar(
+        "Error",
+        "Unable to verify user. Please login again.",
+        snackPosition: SnackPosition.BOTTOM,
+      );
+
       await FirebaseAuth.instance.signOut();
       Get.offAllNamed(AppRoutes.login);
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -85,6 +87,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 ),
               ),
               SizedBox(height: 200.h),
+              // Directly open the bottom navigation instead of the signup/login screen
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16.w),
                 child: SizedBox(
@@ -92,6 +95,8 @@ class _SplashScreenState extends State<SplashScreen> {
                   child: CustomButtonAuth(
                     text: "Sign up",
                     onPressed: () {
+                      // This can be optional, if you still want users to sign up.
+                      // You can remove or modify this button's action
                       Get.toNamed(AppRoutes.signup);
                     },
                   ),
@@ -101,6 +106,7 @@ class _SplashScreenState extends State<SplashScreen> {
               CustomButtonWidget(
                 text: 'Already have an account? Login',
                 onPressed: () {
+                  // This can also be removed if you want to bypass login entirely
                   Get.toNamed(AppRoutes.login);
                 },
               ),

@@ -176,7 +176,7 @@ class UserListTile extends StatelessWidget {
                     SizedBox(height: 4.h),
 
                     Text(
-                      'PayRate: $payRate',
+                      'PayRate: \$$payRate/hr',
                       style: TextStyle(
                         fontSize: 12.sp,
                         fontWeight: FontWeight.bold,
